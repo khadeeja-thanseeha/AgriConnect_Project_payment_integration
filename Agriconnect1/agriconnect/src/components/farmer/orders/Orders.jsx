@@ -36,6 +36,22 @@ function Orders() {
     }
   };
 
+  // Add this inside your Orders component in Orders.jsx
+const handleCompleteOrder = async (orderId) => {
+  try {
+    const token = localStorage.getItem('token');
+    await axios.patch(`http://localhost:5000/api/orders/complete/${orderId}`, {}, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    
+    // Refresh the list locally
+    setOrders(prev => prev.map(o => o._id === orderId ? { ...o, status: 'Delivered' } : o));
+    alert("Order marked as Delivered!");
+  } catch (err) {
+    console.error("Failed to complete order", err);
+  }
+};
+
   // Logic: Filter based on the selected button
   const filteredOrders = orders.filter(order => {
     if (view === 'active') return order.status !== 'Delivered';
@@ -104,7 +120,7 @@ function Orders() {
                         <th>Crop Name</th>
                         <th>Customer</th>
                         <th>Quantity</th>
-                        <th>Total (ETH)</th>
+                        <th>Total (INR)</th>
                         <th>Status</th>
                         {view === 'active' && <th>Action</th>}
                       </tr>
@@ -118,7 +134,7 @@ function Orders() {
                             </span>
                           </td>
                           <td>{order.productId?.cropName || "Unknown Crop"}</td>
-                          <td>{order.consumerId?.name || "Anonymous"}</td>
+                          <td>{order.consumerId?.fullName || "Anonymous"}</td>
                           <td>{order.quantity} kg</td>
                           <td className="fw-bold text-success">Ξ {order.totalPrice.toFixed(4)}</td>
                           <td>
@@ -132,7 +148,7 @@ function Orders() {
                           </td>
                           {view === 'active' && (
                             <td>
-                              <MDBBtn size="sm" color="success" className="shadow-0 py-2">
+                              <MDBBtn size="sm" color="success" className="shadow-0 py-2" onClick={() => handleCompleteOrder(order._id)}>
                                 Complete
                               </MDBBtn>
                             </td>

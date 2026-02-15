@@ -27,7 +27,7 @@ const farmerRoutes = require('./routes/farmer');
 const consumerRoutes = require('./routes/consumer');
 const productRoutes = require('./routes/productRoutes');
 const disputeRoutes = require('./routes/disputeRoutes');
-
+const orderRoutes = require('./routes/orderRoutes');
 
 app.use('/api/farmer', farmerRoutes);
 app.use('/api/consumer', consumerRoutes);
@@ -38,6 +38,7 @@ app.use('/api/products', productRoutes);
 app.use('/uploads', express.static('uploads'));
 
 app.use('/api/disputes', disputeRoutes);
+app.use('/api/orders', orderRoutes);
 // 3. Registration Route
 app.post('/api/farmer/register', async (req, res) => {
   try {

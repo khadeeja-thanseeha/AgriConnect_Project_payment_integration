@@ -12,6 +12,7 @@ const OrderSchema = new mongoose.Schema({
     default: 'Active' 
   },
   transactionHash: { type: String }, // For DeFi/Blockchain tracking
+  blockchainOrderId: { type: String },
   createdAt: { type: Date, default: Date.now }
 });
 
