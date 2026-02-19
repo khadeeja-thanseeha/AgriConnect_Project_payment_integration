@@ -83,7 +83,7 @@ const Checkout = () => {
       // TRIGGER METAMASK POPUP
       const tx = await escrowContract.deposit(sellerWallet, {
         value: ethers.parseEther(ethValue),
-        gasLimit: 100000, // Hardcode gas to bypass MetaMask's buggy estimation
+        gasLimit: 500000, // Hardcode gas to bypass MetaMask's buggy estimation
     });
 
       console.log("Mining transaction...", tx.hash);
