@@ -44,6 +44,7 @@ router.post('/place', auth, async (req, res) => {
     });
 
     product.quantity -= quantity; 
+    product.soldQuantity = (product.soldQuantity || 0) + Number(quantity);
     await product.save();
     await newOrder.save();
 

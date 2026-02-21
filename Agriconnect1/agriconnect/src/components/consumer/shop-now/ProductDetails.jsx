@@ -133,7 +133,13 @@ const ProductDetails = () => {
             
             <button 
               className="buy-btn" 
-              onClick={() => navigate('/checkout', { state: { product, qty, totalEth, totalInr } })}
+              onClick={() => navigate('/checkout', { state: 
+                                                          { product, 
+                                                            qty, 
+                                                            totalAmountETH: totalEth, // Matches Checkout.jsx expectation
+                                                            totalAmountINR: totalInr  // Matches Checkout.jsx expectation
+                                                          } 
+                                                  })}
             >
               Buy Now
             </button>

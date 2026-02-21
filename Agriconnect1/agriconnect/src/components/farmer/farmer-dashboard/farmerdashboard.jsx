@@ -15,6 +15,8 @@ import {
 import { Line } from 'react-chartjs-2';
 
 import WeatherCard from './WeatherCard'; 
+import { ethers } from "ethers";
+import EscrowABI from "../../../contracts/EscrowABI.json";
 
 // Registering ChartJS
 ChartJS.register(
@@ -26,6 +28,8 @@ function FarmerDashboard() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [ethRate, setEthRate] = useState(0);
+  const [walletBalance, setWalletBalance] = useState("0.0000");
+  const [transactions, setTransactions] = useState([]);
 
   // Theme Colors
   const agrilight = "#37c90bff";
@@ -43,6 +47,53 @@ function FarmerDashboard() {
     }
   }, [navigate]);
 
+
+  const fetchWalletBalance = async () => {
+  if (window.ethereum) {
+    try {
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+      
+      if (accounts.length > 0) {
+        const balance = await provider.getBalance(accounts[0]);
+        // Format the BigInt balance to a readable ETH string
+        setWalletBalance(parseFloat(ethers.formatEther(balance)).toFixed(4));
+      }
+    } catch (err) {
+      console.error("Error fetching blockchain balance:", err);
+    }
+    }
+  };
+
+  const fetchTransactionHistory = async () => {
+  try {
+    const provider = new ethers.BrowserProvider(window.ethereum);
+    const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+    const farmerAddress = accounts[0].toLowerCase();
+    const ESCROW_ABI = EscrowABI;           
+    const ESCROW_ADDRESS = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
+    const escrowContract = new ethers.Contract(ESCROW_ADDRESS, ESCROW_ABI, provider);
+    
+    // Fetch all logs from the contract
+    const logs = await escrowContract.queryFilter("OrderPlaced", 0, "latest");
+
+    const myPayments = logs
+      .map(log => ({
+        orderId: log.args[0].toString(),
+        buyer: log.args[1].toLowerCase(),
+        seller: log.args[2].toLowerCase(),
+        amount: ethers.formatEther(log.args[3]),
+        hash: log.transactionHash
+      }))
+      // Manual filter since the parameter is not indexed
+      .filter(tx => tx.seller === farmerAddress);
+
+    setTransactions(myPayments);
+  } catch (err) {
+    console.error("History fetch error:", err);
+  }
+};
+
   const fetchDashboardData = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -50,7 +101,8 @@ function FarmerDashboard() {
       // Fetch live ETH rate
       const rateRes = await axios.get('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=inr');
       setEthRate(rateRes.data.ethereum.inr);
-
+      await fetchWalletBalance();
+      await fetchTransactionHistory();
       // Reusing your inventory route to calculate totals
       const res = await axios.get('http://localhost:5000/api/products/my-inventory', {
         headers: { 'Authorization': `Bearer ${token}` }
@@ -189,8 +241,7 @@ function FarmerDashboard() {
                 { label: "Total Sold", val: `${totalSoldUnits} Units`, icon: "shopping-basket" },
                 { label: "Unsold Items", val: `${totalUnsoldUnits} Units`, icon: "boxes" },
                 { label: "Total Earnings", val: `Ξ ${totalEarningsETH.toFixed(4)}`, icon: "wallet" },
-                { label: "Today's Sales", val: "Ξ 0.000", icon: "chart-line" },
-                { label: "Wallet Balance", val: "2.45 ETH", icon: "coins" }
+                { label: "Wallet Balance", val: `${walletBalance} ETH`, icon: "coins" }
               ].map((m, i) => (
                 <div key={i} className={`p-3 flex-grow-1 ${i < 4 ? 'border-end' : ''}`} style={{ borderTop: `4px solid ${agrilight}`, minWidth: '180px' }}>
                   <div className="d-flex justify-content-between align-items-center mb-1">
@@ -295,11 +346,37 @@ function FarmerDashboard() {
 </MDBCol>
 
           <MDBCol md="4">
-            <ActionCard title="Recent Payments" footerAction="View All DeFi TX" insightTitle="Payment Status" insightContent="2 Pending Confirmation">
-              <div className="text-center py-4 text-muted small">
-                 Wallet connected. Monitoring Sepolia transactions...
-              </div>
-            </ActionCard>
+            <ActionCard title="Recent Payments" footerAction="View All DeFi TX">
+              {transactions.length > 0 ? (
+              <MDBTable small borderless className="mb-0">
+                <MDBTableHead>
+                  <tr className="small text-muted">
+                    <th>Order ID</th>
+                    <th>Amount</th>
+                    <th>Tx Hash</th>
+                  </tr>
+                </MDBTableHead>
+              <MDBTableBody>
+              {transactions.slice(0, 5).map((tx, idx) => (
+                <tr key={idx} style={{ fontSize: '0.8rem' }}>
+                  <td className="fw-bold">#{tx.orderId}</td>
+                  <td className="text-success">{tx.amount} ETH</td>
+                  <td>
+                  <a href={`https://etherscan.io/tx/${tx.hash}`} target="_blank" className="text-muted">
+                    {tx.hash.substring(0, 6)}...
+                  </a>
+                  </td>
+                </tr>
+              ))}
+              </MDBTableBody>
+            </MDBTable>
+            ) : (
+            <div className="text-center py-4 text-muted small">
+              No on-chain transactions detected for this wallet.
+            </div>
+            )}
+          </ActionCard>
+
           </MDBCol>
            {/* Farmer University Activated */}
 

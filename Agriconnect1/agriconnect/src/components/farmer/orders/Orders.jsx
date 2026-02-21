@@ -37,20 +37,6 @@ function Orders() {
   };
 
   // Add this inside your Orders component in Orders.jsx
-const handleCompleteOrder = async (orderId) => {
-  try {
-    const token = localStorage.getItem('token');
-    await axios.patch(`http://localhost:5000/api/orders/complete/${orderId}`, {}, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    
-    // Refresh the list locally
-    setOrders(prev => prev.map(o => o._id === orderId ? { ...o, status: 'Delivered' } : o));
-    alert("Order marked as Delivered!");
-  } catch (err) {
-    console.error("Failed to complete order", err);
-  }
-};
 
   // Logic: Filter based on the selected button
   const filteredOrders = orders.filter(order => {
@@ -122,47 +108,62 @@ const handleCompleteOrder = async (orderId) => {
                         <th>Quantity</th>
                         <th>Total (INR)</th>
                         <th>Status</th>
-                        {view === 'active' && <th>Action</th>}
+                        {view === 'delivered' && <th>Transaction Hash</th>} {/* Add this line */}
                       </tr>
                     </MDBTableHead>
                     <MDBTableBody>
-                      {filteredOrders.map((order) => (
-                        <tr key={order._id}>
-                          <td>
-                            <span className="fw-bold text-primary">
-                              ORD-{order._id.substring(order._id.length - 5).toUpperCase()}
-                            </span>
-                          </td>
-                          <td>{order.productId?.cropName || "Unknown Crop"}</td>
-                          <td>{order.consumerId?.fullName || "Anonymous"}</td>
-                          <td>{order.quantity} kg</td>
-                          <td className="fw-bold text-success">Ξ {order.totalPrice.toFixed(4)}</td>
-                          <td>
-                            <MDBBadge 
-                              color={order.status === 'Delivered' ? 'success' : 'warning'} 
-                              light 
-                              className="px-3 py-2"
-                            >
-                              {order.status}
-                            </MDBBadge>
-                          </td>
-                          {view === 'active' && (
-                            <td>
-                              <MDBBtn size="sm" color="success" className="shadow-0 py-2" onClick={() => handleCompleteOrder(order._id)}>
-                                Complete
-                              </MDBBtn>
-                            </td>
-                          )}
-                        </tr>
-                      ))}
-                      {filteredOrders.length === 0 && (
-                        <tr>
-                          <td colSpan={view === 'active' ? 7 : 6} className="text-center py-5 text-muted">
-                            No {view} orders found.
-                          </td>
-                        </tr>
-                      )}
-                    </MDBTableBody>
+  {filteredOrders.map((order) => (
+    <tr key={order._id}>
+      <td>
+        <span className="fw-bold text-primary">
+          ORD-{order._id.substring(order._id.length - 5).toUpperCase()}
+        </span>
+      </td>
+      <td>{order.productId?.cropName || "Unknown Crop"}</td>
+      <td>{order.consumerId?.fullName || "Anonymous"}</td>
+      <td>{order.quantity} kg</td>
+      {/* CULTURAL NOTE: Use totalPrice as a regular number for calculations */}
+      <td className="fw-bold text-success">
+        Ξ {(order.totalPrice || 0).toFixed(4)}
+      </td>
+      <td>
+        <MDBBadge 
+          color={order.status === 'Delivered' ? 'success' : 'warning'} 
+          light 
+          className="px-3 py-2"
+        >
+          {order.status}
+        </MDBBadge>
+      </td>
+      {/* Optimized Conditional: No extra spaces between tags */}
+      {view === 'delivered' && (
+        <td>
+          {order.transactionHash ? (
+            <span 
+              className="text-decoration-none small"
+              style={{ color: agrilight, cursor: 'help' }}
+              title="Verified on Local Hardhat Node"
+            >
+              <MDBIcon fas icon="shield-alt" className="me-1" />
+              {order.transactionHash.substring(0, 6)}...{order.transactionHash.substring(order.transactionHash.length - 4)}
+            </span>
+          ) : (
+            <span className="text-muted small">N/A</span>
+          )}
+        </td>
+      )}
+    </tr>
+  ))}
+
+  {/* FIXED: Dynamic colSpan for the empty state row */}
+  {filteredOrders.length === 0 && (
+    <tr>
+      <td colSpan={view === 'delivered' ? 7 : 6} className="text-center py-5 text-muted">
+        No {view} orders found.
+      </td>
+    </tr>
+  )}
+</MDBTableBody>
                   </MDBTable>
                 )}
               </MDBCardBody>

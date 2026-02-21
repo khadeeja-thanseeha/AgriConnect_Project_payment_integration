@@ -18,8 +18,8 @@ function Growth() {
   const [view, setView] = useState('weekly');
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [ethRate, setEthRate] = useState(0);
 
-  // Theme Colors
   const agrilight = "#37c90bff";
   const agriDark = "#153b0fff"; 
   const lightGreyBg = "#f6f6f6";
@@ -31,6 +31,12 @@ function Growth() {
   const fetchRealData = async () => {
     try {
       const token = localStorage.getItem('token');
+      
+      // 1. Fetch live ETH rate
+      const rateRes = await axios.get('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=inr');
+      setEthRate(rateRes.data.ethereum.inr);
+
+      // 2. Fetch inventory
       const res = await axios.get('http://localhost:5000/api/products/my-inventory', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -43,11 +49,14 @@ function Growth() {
   };
 
   // --- DYNAMIC CALCULATIONS ---
+  // Ensure we handle potential null/undefined values
   const totalSold = products.reduce((acc, p) => acc + (p.soldQuantity || 0), 0);
-  const totalRevenue = products.reduce((acc, p) => acc + ((p.soldQuantity || 0) * p.price), 0);
-  const avgRevenue = products.length > 0 ? totalRevenue / products.length : 0;
+  const totalRevenueINR = products.reduce((acc, p) => acc + ((p.soldQuantity || 0) * (p.priceInINR || 0)), 0);
+  const totalRevenueETH = ethRate > 0 ? totalRevenueINR / ethRate : 0;
+  
+  // Adjusted avgRevenue to use the correct ETH variable
+  const avgRevenueETH = products.length > 0 ? totalRevenueETH / products.length : 0;
 
-  // Configuration for different views (Using real total as the current peak)
   const dataConfig = {
     daily: {
       labels: ['6AM', '9AM', '12PM', '3PM', '6PM', '9PM'],
@@ -56,7 +65,7 @@ function Growth() {
     },
     weekly: {
       labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-      data: [12, 19, 15, 25, 22, 30, totalSold], // Last point is your actual DB total
+      data: [12, 19, 15, 25, 22, 30, totalSold], 
       label: 'Current Week Performance'
     },
     monthly: {
@@ -142,7 +151,8 @@ function Growth() {
                     <small className="text-muted text-uppercase" style={{fontSize: '0.65rem'}}>Growth Rate</small>
                   </MDBCol>
                   <MDBCol size="4">
-                    <h5 className="fw-bold mb-0 text-dark">Ξ {totalRevenue.toFixed(4)}</h5>
+                    {/* Fixed variable name here */}
+                    <h5 className="fw-bold mb-0 text-dark">Ξ {totalRevenueETH.toFixed(4)}</h5>
                     <small className="text-muted text-uppercase" style={{fontSize: '0.65rem'}}>Total Revenue (ETH)</small>
                   </MDBCol>
                 </MDBRow>
